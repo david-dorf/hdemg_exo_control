@@ -4,6 +4,11 @@ from h3_msgs.msg import State
 from mobile_hdemg_exo.msg import StampedFloat64
 from mobile_hdemg_exo.utils.moving_average import MovingAverage
 
+# TODO: Multiple muscles and exoskeletons
+
+EXO_TYPE = rospy.get_param("/exo_type", str)
+MUSCLE_COUNT = rospy.get_param("/muscle_count", int)
+
 while not rospy.get_param("calibrated"):
     rospy.sleep(0.1)
 

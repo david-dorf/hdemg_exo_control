@@ -9,7 +9,10 @@ import tkinter as tk
 import pyttsx3
 import rospy
 
+# TODO: Multiple muscles and exoskeletons
+
 EXO_TYPE = rospy.get_param("/exo_type", str)
+MUSCLE_COUNT = rospy.get_param("/muscle_count", int)
 
 
 class TrialRunner:
@@ -38,27 +41,27 @@ class TrialRunner:
         self._rms_sub = rospy.Subscriber(
             '/hdEMG_stream_rms', StampedFloat64, self.emg_callback)
 
-        # H3 Setup
-        # Enumerate the exoskeleton side for indexing the exo torque sensor array
-        self.side_dict = {"Left": 5, "Right": 2, "File": 1}
-        self._torque_sub = rospy.Subscriber(
-            '/h3/robot_states', State, self.torque_callback)
-        self._battery_sub = rospy.Subscriber(
-            '/h3/robot_states', State, self.battery_callback)
+        if EXO_TYPE == "H3":
+            # Enumerate the exoskeleton side for indexing the exo torque sensor array
+            self.side_dict = {"Left": 5, "Right": 2, "File": 1}
+            self._torque_sub = rospy.Subscriber(
+                '/h3/robot_states', State, self.torque_callback)
+            self._battery_sub = rospy.Subscriber(
+                '/h3/robot_states', State, self.battery_callback)
 
-        # Publisher for position control
-        if (self.side == "Left"):
-            self._position_pub = rospy.Publisher(
-                '/h3/left_ankle_position_controller/command', Float64, queue_size=0)
-        elif (self.side == "Right"):
-            self._position_pub = rospy.Publisher(
-                '/h3/right_ankle_position_controller/command', Float64, queue_size=0)
-        elif (self.device == "File"):
-            self._position_pub = rospy.Publisher(
-                '/h3/right_ankle_position_controller/command', Float64, queue_size=0)
-        else:
-            raise NameError(
-                "Side name must be Left, Right, or the system must be in File device mode")
+            # Publisher for position control
+            if (self.side == "Left"):
+                self._position_pub = rospy.Publisher(
+                    '/h3/left_ankle_position_controller/command', Float64, queue_size=0)
+            elif (self.side == "Right"):
+                self._position_pub = rospy.Publisher(
+                    '/h3/right_ankle_position_controller/command', Float64, queue_size=0)
+            elif (self.device == "File"):
+                self._position_pub = rospy.Publisher(
+                    '/h3/right_ankle_position_controller/command', Float64, queue_size=0)
+            else:
+                raise NameError(
+                    "Side name must be Left, Right, or the system must be in File device mode")
 
         # Initialize the GUI
         self.window = tk.Tk()
@@ -80,19 +83,27 @@ class TrialRunner:
         self._emg_array.append(data.data.data)
         self._emg_time_array.append(data.header.stamp.to_sec())
 
-    def torque_callback(self, data):
-        self._torque_array.append(
-            data.joint_torque_sensor[self.side_dict[self.side]])
-        self._torque_time_array.append(data.header.stamp.to_sec())
-        self._MVC_torque_array.append(data.joint_torque_sensor[self.side_id])
+    if EXO_TYPE == "H3":
+        def torque_callback(self, data):
+            self._torque_array.append(
+                data.joint_torque_sensor[self.side_dict[self.side]])
+            self._torque_time_array.append(data.header.stamp.to_sec())
+            self._MVC_torque_array.append(
+                data.joint_torque_sensor[self.side_id])
 
-    def battery_callback(self, data):
-        if data.battery_voltage < 18.0 and data.battery_voltage > 1:
-            print("Please charge the battery" +
-                  f"Battery voltage: {data.battery_voltage}")
+        def battery_callback(self, data):
+            if data.battery_voltage < 18.0 and data.battery_voltage > 1:
+                print("Please charge the battery" +
+                      f"Battery voltage: {data.battery_voltage}")
+
+        def _set_exo_angle(self, angle):
+            print("Moving to {} degrees".format(str(np.rad2deg(angle))))
+            self._position_pub.publish(float(angle))
+            rospy.sleep(5)
 
     def collect_trial_data(self):
-        self._set_exo_angle(self.trial.joint_angle)
+        if EXO_TYPE == "H3":
+            self._set_exo_angle(self.trial.joint_angle)
         baseline_torque, min_torque = self._collect_baseline_torque()
         self.trial.baseline_torque = baseline_torque
         self.trial.min_torque = min_torque
@@ -100,27 +111,9 @@ class TrialRunner:
             self.trial.MVC_torque = self._collect_max_torque()
         else:
             self.trial.MVC_torque = 2.0
-        plt.plot(self._torque_time_array,
-                 self._torque_array, label='Torque')
-
-        plt.plot(self._emg_time_array, self._emg_array, label='EMG')
-        plt.xlabel('Time (s)')
-        plt.ylabel('Torque (Nm) / EMG (mV)')
-        plt.title('Torque Sensor and EMG Data')
-        plt.legend()
-        plt.show()
-        np.savetxt("torque_data.csv", self._torque_array, delimiter=",")
-        np.savetxt("emg_data.csv", self._emg_array, delimiter=",")
-        np.savetxt("torque_time.csv",
-                   self._torque_time_array, delimiter=",")
-        np.savetxt("emg_time.csv", self._emg_time_array, delimiter=",")
-
-        # Calculate the calibration coefficient. TODO: Generalize for 4 muscles
-        emg_avg = np.average(self._torque_array) / \
-            np.average(self._emg_array)
-        torque_avg = np.average(self._emg_array) / \
-            np.average(self._torque_array)
-        rospy.set_param('emg_coef', (float)(torque_avg/emg_avg))
+        emg_coef = np.polyfit(
+            self._emg_array, self._torque_array, 1)[0]
+        rospy.set_param("emg_coef", emg_coef)
         rospy.set_param("calibrated", True)
 
     def update_gui(self, message):
@@ -172,8 +165,3 @@ class TrialRunner:
         self.window.mainloop()
 
         return np.average([mvc1, mvc2])
-
-    def _set_exo_angle(self, angle):
-        print("Moving to {} degrees".format(str(np.rad2deg(angle))))
-        self._position_pub.publish(float(angle))
-        rospy.sleep(5)
