@@ -169,7 +169,6 @@ catkin_install_python(
         nodes/emg_processor_node.py
         nodes/emg_visualizer_node.py
         nodes/startup_gui_node.py
-        nodes/calibrate_node.py
         nodes/torque_file_node.py
         nodes/torque_output_node.py
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

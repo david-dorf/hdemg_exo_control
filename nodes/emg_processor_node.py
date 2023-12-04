@@ -1,6 +1,6 @@
 import rospy
 from std_msgs.msg import Float64MultiArray
-from mobile_hdemg_exo.msg import StampedFloat64MultiArray, StampedFloat64
+from mobile_hdemg_exo.msg import StampedFloat64MultiArray
 from mobile_hdemg_exo.utils.moving_average import MovingAverage
 from mobile_hdemg_exo.utils.processing import notch_filter, butter_bandpass, csv_output
 from mobile_hdemg_exo.processors.emg_process_cst import EMGProcessorCST
@@ -12,6 +12,7 @@ while not rospy.get_param("startup_gui_completed"):
 
 SAMPLING_FREQUENCY = rospy.get_param("/sampling_frequency", int)
 REMOVED_CHANNELS = rospy.get_param("/channels_to_remove")
+MUSCLE_COUNT = rospy.get_param("/muscle_count", int)
 
 
 class EMGProcessorNode:
@@ -50,9 +51,9 @@ class EMGProcessorNode:
         self.cst_array = []
         self.rms_array = []
         self.rms_mov_avg = MovingAverage(
-            window_size=5*SAMPLING_FREQUENCY)  # 5 seconds
+            window_size=SAMPLING_FREQUENCY)
         self.cst_mov_avg = MovingAverage(
-            window_size=5*SAMPLING_FREQUENCY)  # 5 seconds
+            window_size=SAMPLING_FREQUENCY)
         self.b, self.a = butter_bandpass(20, 200, SAMPLING_FREQUENCY, order=2)
 
     def callback(self, raw_message):
@@ -62,30 +63,27 @@ class EMGProcessorNode:
         for channel in REMOVED_CHANNELS:
             hdemg_filtered[channel] = 0
         # RMS
+        self.rms_array = []
         notch_reading = notch_filter(self.raw_data, SAMPLING_FREQUENCY)
         hdemg_filtered = signal.filtfilt(self.b, self.a, notch_reading)
-        for muscle in hdemg_filtered:
-            rms_emg = (np.mean(np.array(muscle)**2))**0.5
-            if rms_emg is not None:
-                smooth_rms = self.rms_mov_avg.moving_avg(rms_emg)
-                self.rms_array.append(smooth_rms)
+        for muscle in range(MUSCLE_COUNT):
+            muscle_emg = hdemg_filtered[muscle*64:(muscle+1)*64]
+            rms_emg = (np.mean(np.array(muscle_emg)**2))**0.5
+            self.rms_array.append(rms_emg)
         rms_message = StampedFloat64MultiArray()
         rms_message.header.stamp = rospy.get_rostime().from_sec(
             rospy.get_time() - self.start_time)
         rms_message.data = Float64MultiArray(data=self.rms_array)
         self.rms_pub.publish(rms_message)
         # CST
-        cst_emg = self.processor.process_reading(hdemg_filtered/10)
-        if cst_emg is not None:
-            smooth_cst = self.cst_mov_avg.moving_avg(cst_emg)
-            self.cst_array.append(smooth_cst)
+        self.cst_array = self.processor.process_reading(hdemg_filtered/10)
         cst_message = StampedFloat64MultiArray()
         cst_message.header.stamp = rospy.get_rostime().from_sec(
             rospy.get_time() - self.start_time)
         cst_message.data = Float64MultiArray(data=self.cst_array)
         self.cst_pub.publish(cst_message)
 
-        csv_output([smooth_rms, smooth_cst])
+        csv_output([self.rms_array, self.cst_array])
         self.r.sleep()
 
 
