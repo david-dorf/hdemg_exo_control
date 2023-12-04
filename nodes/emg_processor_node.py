@@ -11,7 +11,6 @@ while not rospy.get_param("startup_gui_completed"):
     rospy.sleep(0.1)
 
 SAMPLING_FREQUENCY = rospy.get_param("/sampling_frequency", int)
-REMOVED_CHANNELS = rospy.get_param("/channels_to_remove")
 MUSCLE_COUNT = rospy.get_param("/muscle_count", int)
 
 
@@ -60,12 +59,18 @@ class EMGProcessorNode:
         self.raw_data = raw_message.data.data
 
     def process_emg(self):
-        for channel in REMOVED_CHANNELS:
-            hdemg_filtered[channel] = 0
-        # RMS
-        self.rms_array = []
         notch_reading = notch_filter(self.raw_data, SAMPLING_FREQUENCY)
         hdemg_filtered = signal.filtfilt(self.b, self.a, notch_reading)
+        removed_channels_param = rospy.get_param("/channels_to_remove", str)
+        if removed_channels_param != '':
+            removed_channels = [int(channel)
+                                for channel in removed_channels_param.split(",")]
+        else:
+            removed_channels = []
+        for channel in removed_channels:
+            hdemg_filtered[channel] = 0.0
+        # RMS
+        self.rms_array = []
         for muscle in range(MUSCLE_COUNT):
             muscle_emg = hdemg_filtered[muscle*64:(muscle+1)*64]
             rms_emg = (np.mean(np.array(muscle_emg)**2))**0.5

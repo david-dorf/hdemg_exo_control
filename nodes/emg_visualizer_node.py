@@ -43,12 +43,11 @@ class EMGVisualizerNode:
         """
         Normalizes, adds spacing, and removes channels from the raw EMG data for visualization.
         """
-        removed_channels = rospy.get_param("/channels_to_remove")
-        if removed_channels != '':
-            removed_channels = removed_channels.split(',')
-            removed_channels = list(map(int, removed_channels))
-            removed_channels = [
-                x for x in removed_channels if x < MUSCLE_COUNT * 64]
+        visualized_muscle = int(rospy.get_param("/visualized_muscle", int))
+        removed_channels_param = rospy.get_param("/channels_to_remove", str)
+        if removed_channels_param != '':
+            removed_channels = [int(channel)
+                                for channel in removed_channels_param.split(",")]
         else:
             removed_channels = []
         normalization_factor = np.max(np.abs(self.raw_data))
@@ -58,7 +57,8 @@ class EMGVisualizerNode:
         visual_emg = np.delete(visual_emg, removed_channels)
         visual_message = StampedFloat64MultiArray()
         visual_message.header.stamp = rospy.Time.now()
-        visual_message.data = Float64MultiArray(data=visual_emg)
+        visual_message.data = Float64MultiArray(
+            data=visual_emg[(visualized_muscle-1)*64:visualized_muscle*64])
         self.visualizer_pub.publish(visual_message)
         self.r.sleep()
 
