@@ -1,7 +1,7 @@
 <launch>
     <node name = 'start_can' pkg = 'CORC' type = 'initCAN0.sh' output = 'screen'/>
     <param name = 'connected_to_exo' value = 'True'/>
-    <include file = '$(find mobile_hdemg_exo)/launch/emg_core.launch'/>
+    <!-- <include file = '$(find mobile_hdemg_exo)/launch/emg_core.launch'/> -->
     <include file = '$(find CORC)/launch/multi_m1_real.launch'/>
     <param name = 'side' value = 'Left' />
     <param name = 'calibrated' value = 'False'/>

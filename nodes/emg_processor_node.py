@@ -47,6 +47,8 @@ class EMGProcessorNode:
         self.cst_pub = rospy.Publisher(
             'hdEMG_stream_cst', StampedFloat64, queue_size=10)
         self.raw_data = None
+        self.cst_array = []
+        self.rms_array = []
         self.rms_mov_avg = MovingAverage(
             window_size=5*SAMPLING_FREQUENCY)  # 5 seconds
         self.cst_mov_avg = MovingAverage(
@@ -62,21 +64,26 @@ class EMGProcessorNode:
         # RMS
         notch_reading = notch_filter(self.raw_data, SAMPLING_FREQUENCY)
         hdemg_filtered = signal.filtfilt(self.b, self.a, notch_reading)
-        rms_emg = (np.mean(np.array(hdemg_filtered)**2))**0.5
-        smooth_rms = self.rms_mov_avg.moving_avg(rms_emg)
-        rms_message = StampedFloat64()
-        rms_message.header.stamp = rospy.Time.now() - self.start_time
-        rms_message.data = Float64(data=smooth_rms)
+        print(hdemg_filtered)
+        for muscle in hdemg_filtered:
+            rms_emg = (np.mean(np.array(muscle)**2))**0.5
+            if rms_emg is not None:
+                smooth_rms = self.rms_mov_avg.moving_avg(rms_emg)
+                self.rms_array.append(smooth_rms)
+        rms_message = StampedFloat64MultiArray()
+        rms_message.header.stamp = rospy.Time.now() # - self.start_time
+        rms_message.data = self.rms_array
         self.rms_pub.publish(rms_message)
-        # CST
-        cst_emg = self.processor.process_reading(hdemg_filtered/10)
-        smooth_cst = self.cst_mov_avg.moving_avg(cst_emg)
-        cst_message = StampedFloat64()
-        cst_message.header.stamp = rospy.Time.now() - self.start_time
-        cst_message.data = Float64(data=smooth_cst)
-        self.cst_pub.publish(cst_message)
+        # # CST
+        # cst_emg = self.processor.process_reading(hdemg_filtered/10)
+        # if cst_emg is not None:
+        #     smooth_cst = self.cst_mov_avg.moving_avg(cst_emg)
+        #     cst_message = StampedFloat64()
+        #     cst_message.header.stamp = rospy.Time.now() # - self.start_time
+        #     cst_message.data = Float64(data=float(smooth_cst))
+        #     self.cst_pub.publish(cst_message)
 
-        csv_output([smooth_rms, smooth_cst])
+        # csv_output([smooth_rms, smooth_cst])
         self.r.sleep()
 
 

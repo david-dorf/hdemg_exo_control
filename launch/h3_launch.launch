@@ -1,6 +1,6 @@
 <launch>
     <param name = 'connected_to_exo' value = 'True'/>
-    <include file = '$(find mobile_hdemg_exo)/launch/emg_core.launch'/>
+    <!-- <include file = '$(find mobile_hdemg_exo)/launch/emg_core.launch'/> -->
     <include file = '$(find h3_launch)/launch/h3_launch_torque_control.launch' />
     <param name = 'side' value = 'Left' />
     <param name = 'calibrated' value = 'False'/>
