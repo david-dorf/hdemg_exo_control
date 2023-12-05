@@ -1,4 +1,4 @@
-# Mobile hdEMG Controller for the Technaid H3 Exoskeleton 
+# Mobile hdEMG Controller for the Technaid H3 and Fourier Intelligence X2 and M1 Exoskeleton systems
 
 ## Easy Setup [Without Exoskeleton]
 - Clone this repository into a ROS workspace
@@ -13,14 +13,16 @@ the File option in the GUI pop-up to use a prerecorded dataset
 
 ## Overview
 
-This software is intended to allow for high density EMG control of the **Technaid H3 exoskeleton** for rehabilitation at Shirley Ryan AbilityLab. The package is designed to run on the **Jetson Orin Nano Developer Kit**, but can also work on any Ubuntu 20.04 system. However, the latency analyzer system only runs on systems with GPIO pins with PWM capability. The Jetson Orin Nano launches the EMG and ankle exoskeleton ROS nodes. The EMG package, ```mobile_hdemg_exo``` connects to and reads data from an **OTB Quattrocento** or **OTB Muovi+Pro** EMG device, as well as the ability to process prerecorded datasets. The package processes the raw EMG data with either a root-mean-squared method or a cumulative spike train neural network approach. It then calibrates the EMG data to the torque sensor data on the exoskeleton, and the EMG coefficients are used to convert the patient's EMG to accurate predicted torque commands to the exoskeleton. The H3 nodes control and read/write torque data from the exoskeleton.
+This software is intended to allow for high density EMG control of various exoskeletons for rehabilitation at Shirley Ryan AbilityLab. The package is designed to run on the **Jetson Orin Nano Developer Kit**, but can also work on any Ubuntu 20.04 device. The EMG package, ```mobile_hdemg_exo``` connects to and reads data from an **OTB Quattrocento** or **OTB Muovi+Pro** EMG device, and can also process prerecorded datasets. The package processes the raw EMG data with either a root-mean-squared method or a cumulative spike train convolutional neural network approach. It then calibrates the EMG data to the torque sensor data on the exoskeleton, and the EMG coefficients are used to convert the patient's EMG to accurate predicted torque commands to the exoskeleton. The exoskeleton control and read/write torque data from their respective device.
+This package also provides an interface that speaks and displays instructions to the patient for them to move, in order to calibrate the EMG to their intended torque. 
 
-More information about the H3 exoskeleton is in a documentation PDF within this repository. This package provides an interface that speaks and displays instructions to the patient for them to move, in order to calibrate the EMG to their intended torque. 
-
-This package also includes a latency analyzer to measure system processing time across each individual physical component, as well as each system process running on the exoskeleton and Orin Nano. The Orin Nano generates a 3.3V PWM output on GPIO pin 33 into an input on the EMG device. The processed signal is sent back over ethernet to the Orin Nano. The inverse of the difference in frequency between the PWM input and EMG output is the EMG device's latency. The delay of the EMG processing, calibration, and exoskeleton torque command is determined by using rostopic delay on their respective topics.
+If using the Jetson Orin Nano or Raspberry Pi, there is an optional latency analyzer to measure system processing time across each individual physical component, as well as each system process running on the exoskeleton and Orin Nano. The Orin Nano generates a 3.3V PWM output on GPIO pin 33 into an input on the EMG device. The processed signal is sent back over ethernet to the Orin Nano. The inverse of the difference in frequency between the PWM input and EMG output is the EMG device's latency. The delay of the EMG processing, calibration, and exoskeleton torque command is determined by using rostopic delay on their respective topics.
 
 ## Software Architecture
 ![latencychart](https://github.com/Technaid-S-L/technaid_h3_ankle_ros_python/assets/113081373/b294f94c-8046-41e6-9f5a-710b0d6b98c1)
+
+## Hardware Setup
+![hardware](https://github.com/Technaid-S-L/technaid_h3_ankle_ros_python/assets/113081373/f0cd0a10-c66b-4bc8-b535-b7f9276eb0a0)
 
 ## Latency Analyzer Architecture
 ![latency_analyzer](https://github.com/Technaid-S-L/technaid_h3_ankle_ros_python/assets/113081373/ffa85a23-80ef-410d-be35-f5984ff19d2c)
@@ -28,8 +30,6 @@ This package also includes a latency analyzer to measure system processing time 
 ## Power Architecture
 ![power](https://github.com/Technaid-S-L/technaid_h3_ankle_ros_python/assets/113081373/f8f1b4db-32b2-464e-a698-3a3014793764)
 
-## Hardware Setup
-![hardware](https://github.com/Technaid-S-L/technaid_h3_ankle_ros_python/assets/113081373/f0cd0a10-c66b-4bc8-b535-b7f9276eb0a0)
 
 ## Software Setup
 ### Dependencies
@@ -54,7 +54,16 @@ This package also includes a latency analyzer to measure system processing time 
 - Please refer to the setup instructions here: http://wiki.ros.org/noetic/Installation/Ubuntu
 - Install the ROS Noetic ros_control package with ```sudo apt-get install ros-noetic-ros-control ros-noetic-ros-controllers```
 
-### PCAN
+### EMG Connections
+#### Quattrocento
+- Go to Network Settings and click the Settings cog next to the wired connection
+- Access the IPv4 tab and enable Link-Local Only, then hit Apply
+- See the OTB manual for setting up the Quattrocento hardware and connecting over Ethernet: https://www.otbioelettronica.it/en/downloads#41-quattrocento
+
+#### Muovi+Pro
+- See the OTB manual for setting up the Muovi+Pro hardware https://www.otbioelettronica.it/en/downloads#64-muovi-pro
+
+### PCAN [Technaid H3 Only]
 The Technaid H3 Exoskeleton uses PEAK CAN as its CAN interface. The PEAK CAN driver package and the PCAN Basic API must be installed on the device with the following steps:
 - Download the Linux driver package from https://www.peak-system.com/Drivers.523.0.html?&L=1
 - Download the Linux PCAN Basic API from https://www.peak-system.com/PCAN-Basic.239.0.html?&L=1
@@ -65,8 +74,7 @@ The Technaid H3 Exoskeleton uses PEAK CAN as its CAN interface. The PEAK CAN dri
   - ```sudo make install```
   - ```sudo modprobe pcan```
 
-### GPIO Pin Configuration
-Note: This approach works for the Jetson Orin Nano, but other devices with GPIO/PWM pins will likely have a different pin number than 33, which can be obtained from the product's datasheet.
+### GPIO Pin Configuration [Jetson Orin Nano Only]
 In order to use PWM and other additional GPIO modifications, the steps below must be taken:
 - Download the NVIDIA GPIO interface library with `git clone https://github.com/NVIDIA/jetson-gpio.git`
 - In the root of the cloned directory, run `sudo python3 setup.py install`
@@ -76,24 +84,3 @@ In order to use PWM and other additional GPIO modifications, the steps below mus
   - `sudo cp lib/python/Jetson/GPIO/99-gpio.rules /etc/udev/rules.d/`
   - `sudo udevadm control --reload-rules && sudo udevadm trigger`
   - `sudo /opt/nvidia/jetson-io/jetson-io.py` and change Pin 33 in the pinmux configuration to enable PWM on Pin 33. Save and reboot when prompted for the hardware changes to properly initiate.
-
-### Device Connections
-#### Quattrocento
-- Go to Network Settings and click the Settings cog next to the wired connection
-- Access the IPv4 tab and enable Link-Local Only, then hit Apply
-- See the OTB manual for setting up the Quattrocento hardware and connecting over Ethernet: https://www.otbioelettronica.it/en/downloads#41-quattrocento
-
-#### Muovi+Pro
-- See the OTB manual for setting up the Muovi+Pro hardware https://www.otbioelettronica.it/en/downloads#64-muovi-pro
-
-###  Repository
-- Create a directory with a subdirectory called ```src```
-- Navigate into ```src``` and clone the GitHub repository with ```git clone https://github.com/Technaid-S-L/technaid_h3_ankle_ros_python```
-- Switch the Git branch to MSR_Project_2023 with ```git checkout MSR_Project_2023```
-
-### Build
-- Go back to the directory containing ```src``` and run ```catkin_make```
-
-### Launch
-- Source a ROS workspace with ```source devel/setup.bash```
-- Launch the system with ```roslaunch mobile_hdemg_exo h3_launch.launch```. The system can be further configured by the user in the startup screen.

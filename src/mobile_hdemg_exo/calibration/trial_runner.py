@@ -9,6 +9,8 @@ import tkinter as tk
 import pyttsx3
 import rospy
 
+EXO_TYPE = rospy.get_param("/exo_type", str)
+
 
 class TrialRunner:
     _r: rospy.Rate
@@ -30,16 +32,17 @@ class TrialRunner:
         self.side = rospy.get_param("/side")
         self.device = rospy.get_param("/device")
 
-        # Enumerate the exoskeleton side for indexing the exo torque sensor array
-        self.side_dict = {"Left": 5, "Right": 2, "File": 1}
-
-        # Subscribers for the torque and hd-EMG publishers
-        self._torque_sub = rospy.Subscriber(
-            '/h3/robot_states', State, self.torque_callback)
+        # EMG Setup
         self._cst_sub = rospy.Subscriber(
             '/hdEMG_stream_cst', StampedFloat64, self.emg_callback)
         self._rms_sub = rospy.Subscriber(
             '/hdEMG_stream_rms', StampedFloat64, self.emg_callback)
+
+        # H3 Setup
+        # Enumerate the exoskeleton side for indexing the exo torque sensor array
+        self.side_dict = {"Left": 5, "Right": 2, "File": 1}
+        self._torque_sub = rospy.Subscriber(
+            '/h3/robot_states', State, self.torque_callback)
         self._battery_sub = rospy.Subscriber(
             '/h3/robot_states', State, self.battery_callback)
 
@@ -89,11 +92,6 @@ class TrialRunner:
                   f"Battery voltage: {data.battery_voltage}")
 
     def collect_trial_data(self):
-        if self._torque_sub is None or self._emg_sub is None or self._position_pub is None:
-            raise NameError(
-                "One of self.torque_sub, self.emg_sub, self.pos_pub is None. Cannot run calibration.")
-        if self.trial == None:
-            return
         self._set_exo_angle(self.trial.joint_angle)
         baseline_torque, min_torque = self._collect_baseline_torque()
         self.trial.baseline_torque = baseline_torque
