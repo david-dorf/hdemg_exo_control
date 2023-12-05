@@ -1,0 +1,9 @@
+<launch>
+    <include file = '$(find mobile_hdemg_exo)/launch/emg_core.launch'/>
+    <include file = '$(find h3_launch)/launch/h3_launch_torque_control.launch' />
+    <param name = 'connected_to_exo' value = 'True'/>
+    <param name = 'side' value = 'Left' />
+    <param name = 'calibrated' value = 'False'/>
+    <node name = 'calibrate_node' pkg = 'mobile_hdemg_exo' type = 'calibrate_node.py' output = 'screen' />
+    <node name = 'torque_output_node' pkg = 'mobile_hdemg_exo' type = 'torque_output_node.py' output = 'screen' />
+</launch>
