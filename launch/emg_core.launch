@@ -12,5 +12,5 @@
     <node name = 'emg_visualizer_node' pkg = 'mobile_hdemg_exo' type = 'emg_visualizer_node.py' output = 'screen' />
     <node name = 'startup_gui_node' pkg = 'mobile_hdemg_exo' type = 'startup_gui_node.py' output = 'screen' />
     <!-- Optional -->
-    <!-- <node name = 'torque_file_node' pkg = 'mobile_hdemg_exo' type = 'torque_file_node.py' output = 'screen' /> -->
+    <node name = 'torque_file_node' pkg = 'mobile_hdemg_exo' type = 'torque_file_node.py' output = 'screen' />
 </launch>

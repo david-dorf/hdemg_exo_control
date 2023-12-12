@@ -47,12 +47,16 @@ class EMGProcessorNode:
         self.cst_pub = rospy.Publisher(
             'hdEMG_stream_cst', StampedFloat64MultiArray, queue_size=10)
         self.raw_data = None
-        self.cst_array = []
-        self.rms_array = []
-        self.rms_mov_avg = MovingAverage(
-            window_size=SAMPLING_FREQUENCY)
-        self.cst_mov_avg = MovingAverage(
-            window_size=SAMPLING_FREQUENCY)
+        self.rms_array = [0.0] * MUSCLE_COUNT
+        self.cst_array = [0.0] * MUSCLE_COUNT
+        self.rms_moving_avg_objects = []
+        self.cst_moving_avg_objects = []
+        # Make moving average objects for each muscle because each muscle has its own window
+        for muscle in range(MUSCLE_COUNT):
+            self.rms_moving_avg_objects.append(MovingAverage(
+                window_size=SAMPLING_FREQUENCY))
+            self.cst_moving_avg_objects.append(MovingAverage(
+                window_size=SAMPLING_FREQUENCY))
         self.b, self.a = butter_bandpass(20, 200, SAMPLING_FREQUENCY, order=2)
 
     def callback(self, raw_message):
@@ -70,18 +74,27 @@ class EMGProcessorNode:
         for channel in removed_channels:
             hdemg_filtered[channel] = 0.0
         # RMS
-        self.rms_array = []
         for muscle in range(MUSCLE_COUNT):
             muscle_emg = hdemg_filtered[muscle*64:(muscle+1)*64]
             rms_emg = (np.mean(np.array(muscle_emg)**2))**0.5
-            self.rms_array.append(rms_emg)
+            smooth_rms = self.rms_moving_avg_objects[muscle].moving_avg(
+                rms_emg)
+            self.rms_array[muscle] = smooth_rms
         rms_message = StampedFloat64MultiArray()
         rms_message.header.stamp = rospy.get_rostime().from_sec(
             rospy.get_time() - self.start_time)
         rms_message.data = Float64MultiArray(data=self.rms_array)
         self.rms_pub.publish(rms_message)
         # CST
-        self.cst_array = self.processor.process_reading(hdemg_filtered/10)
+        raw_cst_output = self.processor.process_reading(hdemg_filtered/20)
+        for muscle in range(MUSCLE_COUNT):
+            if raw_cst_output == 0.0:
+                continue
+            else:
+                self.cst_array[muscle] = raw_cst_output[muscle]
+                smooth_cst = self.cst_moving_avg_objects[muscle].moving_avg(
+                    self.cst_array[muscle])
+                self.cst_array[muscle] = smooth_cst
         cst_message = StampedFloat64MultiArray()
         cst_message.header.stamp = rospy.get_rostime().from_sec(
             rospy.get_time() - self.start_time)

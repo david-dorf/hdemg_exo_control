@@ -11,12 +11,12 @@
                     <axes>
                         <axes>
                             <x_axis>
-                                <custom_title>Time</custom_title>
+                                <custom_title>Time [s]</custom_title>
                                 <title_type>1</title_type>
                                 <title_visible>true</title_visible>
                             </x_axis>
                             <y_axis>
-                                <custom_title>Torque and EMG</custom_title>
+                                <custom_title>EMG [V], Torque [Nm]</custom_title>
                                 <title_type>1</title_type>
                                 <title_visible>true</title_visible>
                             </y_axis>
@@ -36,10 +36,10 @@
                                         <type>0</type>
                                     </scale>
                                     <topic>/hdEMG_stream_cst</topic>
-                                    <type>mobile_hdemg_exo/StampedFloat64</type>
+                                    <type>mobile_hdemg_exo/StampedFloat64MultiArray</type>
                                 </x_axis>
                                 <y_axis>
-                                    <field>data/data</field>
+                                    <field>data/data/0</field>
                                     <field_type>0</field_type>
                                     <scale>
                                         <absolute_maximum>1000</absolute_maximum>
@@ -49,7 +49,7 @@
                                         <type>0</type>
                                     </scale>
                                     <topic>/hdEMG_stream_cst</topic>
-                                    <type>mobile_hdemg_exo/StampedFloat64</type>
+                                    <type>mobile_hdemg_exo/StampedFloat64MultiArray</type>
                                 </y_axis>
                             </axes>
                             <color>
@@ -58,8 +58,8 @@
                             </color>
                             <data>
                                 <circular_buffer_capacity>1000</circular_buffer_capacity>
-                                <time_frame_length>10</time_frame_length>
-                                <type>0</type>
+                                <time_frame_length>100</time_frame_length>
+                                <type>3</type>
                             </data>
                             <style>
                                 <lines_interpolate>false</lines_interpolate>
@@ -72,7 +72,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>CST</title>
+                            <title>CST EMG [V]</title>
                         </curve_0>
                         <curve_1>
                             <axes>
@@ -87,10 +87,10 @@
                                         <type>0</type>
                                     </scale>
                                     <topic>/hdEMG_stream_rms</topic>
-                                    <type>mobile_hdemg_exo/StampedFloat64</type>
+                                    <type>mobile_hdemg_exo/StampedFloat64MultiArray</type>
                                 </x_axis>
                                 <y_axis>
-                                    <field>data/data</field>
+                                    <field>data/data/0</field>
                                     <field_type>0</field_type>
                                     <scale>
                                         <absolute_maximum>1000</absolute_maximum>
@@ -100,7 +100,7 @@
                                         <type>0</type>
                                     </scale>
                                     <topic>/hdEMG_stream_rms</topic>
-                                    <type>mobile_hdemg_exo/StampedFloat64</type>
+                                    <type>mobile_hdemg_exo/StampedFloat64MultiArray</type>
                                 </y_axis>
                             </axes>
                             <color>
@@ -109,8 +109,8 @@
                             </color>
                             <data>
                                 <circular_buffer_capacity>1000</circular_buffer_capacity>
-                                <time_frame_length>10</time_frame_length>
-                                <type>0</type>
+                                <time_frame_length>100</time_frame_length>
+                                <type>3</type>
                             </data>
                             <style>
                                 <lines_interpolate>false</lines_interpolate>
@@ -123,7 +123,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>RMS</title>
+                            <title>RMS EMG [V]</title>
                         </curve_1>
                         <curve_2>
                             <axes>
@@ -160,8 +160,8 @@
                             </color>
                             <data>
                                 <circular_buffer_capacity>1000</circular_buffer_capacity>
-                                <time_frame_length>10</time_frame_length>
-                                <type>0</type>
+                                <time_frame_length>100</time_frame_length>
+                                <type>3</type>
                             </data>
                             <style>
                                 <lines_interpolate>false</lines_interpolate>
@@ -174,14 +174,14 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>Torque</title>
+                            <title>Torque [Nm]</title>
                         </curve_2>
                     </curves>
                     <legend>
                         <visible>true</visible>
                     </legend>
                     <plot_rate>30</plot_rate>
-                    <title>Torque, CST, and RMS EMG from Trapezoidal Trajectory</title>
+                    <title>RMS, CST, and Torque Data</title>
                 </column_0>
             </row_0>
         </plots>
